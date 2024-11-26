@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wall Generator</title>
+    <style>
+        #canvas2 {
+            display: none;
+        }
+
+        #mapCanvas {
+            border: 2px solid #333;
+            margin-top: 20px;
+            display: block;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            max-width: 250px;
+            margin-top: 20px;
+        }
+
+        .slider-container {
+            margin: 10px 0;
+            width: 100%;
+        }
+
+        .slider-container label {
+            font-size: 1em;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .slider-container .slider {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .value-display {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 8px 0;
+            cursor: pointer;
+            font-size: 1em;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            background-color: #003f7f;
+        }
+
+        .button-container {
+            margin-top: 20px;
+        }
+
+        #Walls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas (Left side) -->
+    <div>
+        <canvas id="mapCanvas" width="450" height="450"></canvas>
+    </div>
+
+    <!-- Controls (Right side) -->
+    <div class="controls">
+        <!-- Input for sizex -->
+        <div class="slider-container">
+            <label for="sizexInput">Size X (Width):</label>
+            <input type="number" id="sizexInput" class="slider" min="1" max="100" value="45" step="2" 
+                   pattern="([1-9][0-9]*[13579])">
+        </div>
+
+        <!-- Input for sizey -->
+        <div class="slider-container">
+            <label for="sizeyInput">Size Y (Height):</label>
+            <input type="number" id="sizeyInput" class="slider" min="1" max="100" value="45" step="2"
+                   pattern="([1-9][0-9]*[13579])">
+        </div>
+
+        <!-- Slider for randLeft -->
+        <div class="slider-container">
+            <label for="randLeftSlider">randLeft (0 to 1):</label>
+            <input type="range" id="randLeftSlider" class="slider" min="0" max="100" step="1" value="50">
+            <div class="value-display">Current Left Up%: <span id="randLeftValue">0.50</span></div>
+        </div>
+
+        <!-- Slider for randRight -->
+        <div class="slider-container">
+            <label for="randRightSlider">randRight (0 to 1):</label>
+            <input type="range" id="randRightSlider" class="slider" min="0" max="100" step="1" value="50">
+            <div class="value-display">Current Right Up%: <span id="randRightValue">0.50</span></div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-container">
+            <button id="Walls" onclick="generateWalls(sizex, sizey)">Walls</button>
+            <button onclick="json()">Download JSON</button>
+            <button onclick="png(grid)">Download PNG</button>
+        </div>
+    </div>
+</body>
+</html>
+
+<script>
+
+    // Get slider elements and value displays
+    const randLeftSlider = document.getElementById('randLeftSlider');
+    const randRightSlider = document.getElementById('randRightSlider');
+    const randLeftValue = document.getElementById('randLeftValue');
+    const randRightValue = document.getElementById('randRightValue');
+
+   randLeftSlider.addEventListener('input', function() {
+      randLeft = (randLeftSlider.value / 100).toFixed(2); // Convert slider value to a decimal (0 to 1)
+      randLeftValue.textContent = randLeft;
+      // Call generateWalls with the updated values
+
+      generateWalls(sizex, sizey);
+    });
+
+    // Function to update randRight and its display (scaled to 0 to 1)
+    randRightSlider.addEventListener('input', function() {
+      randRight = (randRightSlider.value / 100).toFixed(2); // Convert slider value to a decimal (0 to 1)
+      randRightValue.textContent = randRight;
+ 
+      generateWalls(sizex,sizey);
+    });
+const tileColors = [
+    { id: 0, rgb: [0, 0, 0] },       // #000000 - Void
+    { id: 1, rgb: [120, 120, 120] }, // #787878 - Wall
+    { id: 2, rgb: [212, 212, 212] }, // #d4d4d4 - Floor
+    { id: 3, rgb: [255, 128, 0] },   // #ff8000 - Orange Bomb
+    { id: 4, rgb: [255, 115, 115] }, // #ff7373 - Red Boost
+    { id: 5, rgb: [115, 115, 255] }, // #7373ff - Blue Boost
+    { id: 6, rgb: [255, 255, 0] },   // #ffff00 - Yellow Boost
+    { id: 7, rgb: [220, 186, 186] }, // #dcbaba - Red TT
+    { id: 8, rgb: [187, 184, 221] }, // #bbb8dd - Blue TT
+    { id: 9, rgb: [220, 220, 186] }, // #dcdcba - Yellow TT
+    { id: 10, rgb: [255, 0, 0] },    // #ff0000 - Red Flag
+    { id: 11, rgb: [0, 0, 255] },    // #0000ff - Blue Flag
+    { id: 12, rgb: [128, 128, 0] },  // #808000 - Yellow Flag
+    { id: 13, rgb: [0, 255, 0] },    // #00ff00 - Green Pup
+    { id: 14, rgb: [128, 64, 112] }, // #804070 - Bottom Right 45
+    { id: 15, rgb: [128, 112, 64] }, // #807040 - Bottom Left 45
+    { id: 16, rgb: [64, 80, 128] },  // #405080 - Top Right 45
+    { id: 17, rgb: [64, 128, 80] }   // #408050 - Top Left 45
+];
+
+
+let Xo = -1;
+let Xn = -1;
+let Yo = -1;
+let Yn = -1;
+let randRight = .5;
+let randLeft = .5;
+let sizex = 45;
+let sizey = 45;
+let insideWalls = [];
+let grid = Array(sizey).fill().map(() => Array(sizex).fill(0)); 
+function generateWalls(sizex, sizey) {
+grid = Array(sizey).fill().map(() => Array(sizex).fill(0)); 
+    insideWalls = [];
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const tileSize = 10; // Each grid cell is 10x10 pixels
+    
+    // Starting positions at the bottom row
+    let leftX = (sizex + 1) / 2 - 1; // Left wall start
+    let rightX = (sizex + 1) / 2 + 1; // Right wall start
+    let leftY = sizey - 1; // Both walls start at y = sizey (bottom)
+    let rightY = sizey - 1;
+
+    // Place the initial center tile (middle of the canvas)
+    grid[sizey -1][(sizex - 1) / 2] = 1; // 1 = wall
+ grid[0][(sizex -1 ) / 2] = 1; // 1 = wall
+    
+insideWalls.push({ x:(sizex - 1) / 2, y:0 });
+insideWalls.push({ x:(sizex - 1) / 2, y:sizey - 1 });    
+ grid[sizey -1][(sizex - 1) / 2+1] = 1; // 1 = wall
+ grid[0][(sizex -1 ) / 2-1] = 1; // 1 = wall
+insideWalls.push({ x:(sizex - 1) / 2-1, y:0 });
+insideWalls.push({ x:(sizex - 1) / 2+1, y:sizey - 1 });
+    
+grid[sizey -1][(sizex - 1) / 2+2] = 1; // 1 = wall
+ grid[0][(sizex -1 ) / 2-2] = 1; // 1 = wall
+insideWalls.push({ x:(sizex - 1) / 2-2, y:0 });
+insideWalls.push({ x:(sizex - 1) / 2+2, y:sizey - 1 });
+    // Generate the left wall
+    while (leftX > 0 && leftY > (sizey -1) / 2) {
+        if (Math.random() <= randLeft) {
+            leftY--; // Move up
+insideWalls.push({ x:leftX, y:leftY });
+            insideWalls.push({ x:sizex-leftX+Xo, y:sizey-leftY+Yo });
+        } else {
+            leftX--; // Move left
+insideWalls.push({ x:leftX, y:leftY });
+        insideWalls.push({ x:sizex-leftX+Xo, y:sizey-leftY+Yo });
+        }
+        grid[leftY][leftX] = 1;
+        grid[sizey-leftY+Yo][sizex-leftX+Xo] = 1;                          // Place the left wall
+    }
+
+    // If the left wall reaches the left edge, move up until it reaches y = (sizeY + 1) / 2
+    while (leftY > (sizey -1) / 2) {
+        leftY--;
+insideWalls.push({ x:leftX, y:leftY });
+        insideWalls.push({ x:sizex-leftX+Xo, y:sizey-leftY+Yo });
+        grid[leftY][leftX] = 1;
+grid[sizey-leftY+Yo][sizex-leftX+Xo] = 1;        
+    }
+
+    // If the left wall reaches the middle first, move right
+    while (leftX > 0 && leftY == (sizey -1) / 2) {
+        leftX--; // Move left
+insideWalls.push({ x:leftX, y:leftY });
+        insideWalls.push({ x:sizex-leftX+Xo, y:sizey-leftY+Yo });
+        grid[leftY][leftX] = 1; // Place the wall
+grid[sizey-leftY+Yo][sizex-leftX+Xo] = 1;   
+    }
+// Generate the right wall
+while (rightX < sizex - 1 && rightY > Math.floor((sizey -1) / 2)) {
+    if (Math.random() <= randRight) {
+        rightY--; // Move up
+insideWalls.push({ x:rightX, y:rightY });
+        insideWalls.push({ x:sizex-rightX+Xn, y:sizey-rightY+Yn });
+    } else {
+        rightX++; // Move right
+insideWalls.push({ x:rightX, y:rightY });
+insideWalls.push({ x:sizex-rightX+Xn, y:sizey-rightY+Yn });
+    }
+    grid[rightY][rightX] = 1; // Place the wall
+grid[sizey-rightY+Yn][sizex-rightX+Xn] = 1;    
+}
+
+// If the right wall reaches the right edge first, move up until it reaches the middle
+if (rightX === sizex - 1 && rightY > Math.floor((sizey - 1) / 2)) {
+    while (rightY > Math.floor((sizey + 1) / 2)) {
+        rightY--; // Move up
+insideWalls.push({ x:rightX, y:rightY });
+insideWalls.push({ x:sizex-rightX+Xn, y:sizey-rightY+Yn });
+        grid[rightY][rightX] = 1; // Place the wall
+grid[sizey-rightY+Yn][sizex-rightX+Xn] = 1;
+    }
+}
+
+// If the right wall reaches the middle first, move right until it reaches the edge
+if (rightY === Math.floor((sizey - 1) / 2) && rightX < sizex - 1) {
+    while (rightX < sizex - 1) {
+        rightX++; // Move right
+insideWalls.push({ x:rightX, y:rightY });
+insideWalls.push({ x:sizex-rightX+Xn, y:sizey-rightY+Yn });
+        grid[rightY][rightX] = 1; // Place the wall
+grid[sizey-rightY+Yn][sizex-rightX+Xn] = 1; 
+    }
+}
+
+highlight()
+renderGrid(grid, sizex, sizey, ctx, tileSize);
+}
+
+function renderGrid(grid, sizex, sizey, ctx, tileSize) {
+    ctx.clearRect(0, 0, sizex * tileSize, sizey * tileSize); // Clear the canvas
+
+    for (let y = 0; y < sizey; y++) {
+        for (let x = 0; x < sizex; x++) {
+            let colorId = grid[y][x]; // Get the tile's ID from the grid
+            let tileColor = tileColors.find(tile => tile.id === colorId); // Find the corresponding color
+
+            if (tileColor) {
+                ctx.fillStyle = `rgb(${tileColor.rgb.join(",")})`; // Set the color based on RGB
+            } else {
+                ctx.fillStyle = 'solid black'; // Default to white if no match
+            }
+
+            ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize); // Draw the tile
+        }
+    }
+}
+
+
+let insideTiles = []; // Public array to store tiles inside the walls
+function highlightTilesBetweenMatchingYs() {
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const tileSize = 10; // Size of each tile on the grid
+
+
+
+    // Helper function to check if a coordinate is part of the insideWalls array
+    function isWall(x, y) {
+        return insideWalls.some(wall => wall.x === x && wall.y === y);
+    }
+
+    // Clear the insideTiles array before recalculating
+    insideTiles = [];
+
+    // Loop through the insideWalls array to find matching y-values
+    for (let i = 0; i < insideWalls.length; i++) {
+        for (let j = i + 1; j < insideWalls.length; j++) {
+            // Check if y values match
+            if (insideWalls[i].y === insideWalls[j].y) {
+                const y = insideWalls[i].y;
+                const x1 = Math.min(insideWalls[i].x, insideWalls[j].x); // Leftmost x coordinate
+                const x2 = Math.max(insideWalls[i].x, insideWalls[j].x); // Rightmost x coordinate
+
+                // Add tiles between x1 and x2 to insideTiles array (excluding x1 and x2)
+                for (let x = x1 + 1; x < x2; x++) {
+                    // Skip if the tile is a wall
+                    if (!isWall(x, y)) {
+                        insideTiles.push({ x, y }); // Add the tile to insideTiles
+                        grid[y][x] = 2; // Update the grid with 2 for inside tiles
+                        
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
+function highlight(){
+highlightTilesBetweenMatchingYs();
+}
+// Call the function to generate the walls and render them
+generateWalls(sizex, sizey);
+
+   const sizexInput = document.getElementById('sizexInput');
+    const sizeyInput = document.getElementById('sizeyInput');
+    const sizexValue = document.getElementById('sizexValue');
+    const sizeyValue = document.getElementById('sizeyValue');
+    const gridSizeDisplay = document.getElementById('gridSize');
+const canvas = document.getElementById('mapCanvas');
+
+    // Function to update the grid size display
+    function updateGridSize() {
+       sizex = parseInt(sizexInput.value);
+      sizey = parseInt(sizeyInput.value);
+      grid = Array(sizey).fill().map(() => Array(sizex).fill(0)); 
+      updateCanvasSize();
+      generateWalls(sizex, sizey);
+    }
+ function updateCanvasSize() {
+      canvas.width = sizex * 10;
+      canvas.height = sizey * 10;
+    }
+    // Event listeners to update values when the input fields change
+    sizexInput.addEventListener('input', updateGridSize);
+    sizeyInput.addEventListener('input', updateGridSize);
+
+
+
+
+ function png(grid) {
+      const canvas2 = document.getElementById('canvas2');
+      const ctx2 = canvas2.getContext('2d');
+      
+      // Set canvas size based on the grid size
+      const sizeX = grid[0].length;
+      const sizeY = grid.length;
+      canvas2.width = sizeX;
+      canvas2.height = sizeY;
+
+      // Loop through the grid and set pixel colors
+      for (let y = 0; y < sizeY; y++) {
+        for (let x = 0; x < sizeX; x++) {
+          const tileId = grid[y][x];
+          const color = tileColors.find(tile => tile.id === tileId);
+          
+          if (color) {
+            ctx2.fillStyle = `rgb(${color.rgb.join(',')})`; // Set the color from tileColors array
+            ctx2.fillRect(x, y, 1, 1); // Draw the 1x1 pixel for the current grid value
+          }
+        }
+      }
+
+      // Convert the canvas to PNG data URL
+      const pngDataUrl = canvas2.toDataURL('image/png');
+
+      // Create an anchor element to download the PNG
+      const link = document.createElement('a');
+      link.href = pngDataUrl;
+      link.download = 'map.png';
+      link.click();
+    }
+
+function json() {
+    // Create the JSON structure
+    var jsonData = {
+        info: {
+            name: "unknown",
+            author: "unknown",
+            gameMode: "normal"
+        },
+        switches: {},
+        fields: {},  // Directly assign formatted object to fields
+        portals: {},
+        marsballs: [],
+        spawnPoints: {      // Correctly define the spawnPoints object
+            red: [],
+            blue: []
+        }
+    };
+
+    // Convert the JSON object to a string
+    var jsonString = JSON.stringify(jsonData, null, 2);
+
+    // Create a Blob from the JSON string
+    var blob = new Blob([jsonString], { type: 'application/json' });
+
+    // Create a link element to download the file
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'data.json'; // Name of the downloaded file
+
+    // Programmatically click the link to trigger the download
+    link.click();
+}
+
+</script>
+
