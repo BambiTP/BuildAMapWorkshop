@@ -82,9 +82,26 @@
         #Walls {
             margin-top: 20px;
         }
+#github-button {
+    position: fixed;
+    bottom: 20px; /* Adjust the distance from the bottom of the screen */
+    right: 20px; /* Adjust the distance from the left of the screen */
+    z-index: 9999; /* Make sure the button is above other content */
+    text-decoration: none; /* Remove underline from link */
+}
+
+/* Optional: Styling the button image (if desired) */
+#github-button img {
+    max-width: 150px; /* You can adjust the button size */
+    height: auto;
+}
     </style>
 </head>
 <body>
+ <!-- GitHub button -->
+    <a href="https://github.com/BambiTP/BuildAMapWorkshop" id="github-button" target="_blank">
+        <img src="https://img.shields.io/badge/BuildAMapWorkshop-GitHub-blue?logo=github&logoColor=white" alt="GitHub" />
+    </a>
     <!-- Canvas (Left side) -->
     <div>
         <canvas id="mapCanvas" width="450" height="450"></canvas>
@@ -110,34 +127,42 @@
         <div class="slider-container">
             <label for="randLeftSlider">randLeft (0 to 1):</label>
             <input type="range" id="randLeftSlider" class="slider" min="0" max="100" step="1" value="50">
-            <div class="value-display">Current Left Up%: <span id="randLeftValue">0.50</span></div>
+            <div class="value-display">Current Left Up%: <span id="randLeftValue">0.5</span></div>
         </div>
 
         <!-- Slider for randRight -->
         <div class="slider-container">
             <label for="randRightSlider">randRight (0 to 1):</label>
             <input type="range" id="randRightSlider" class="slider" min="0" max="100" step="1" value="50">
-            <div class="value-display">Current Right Up%: <span id="randRightValue">0.50</span></div>
+            <div class="value-display">Current Right Up%: <span id="randRightValue">0.5</span></div>
+        </div>
+   <div class="slider-container">
+            <label for="rand45sSlider">rand45s (0 to 1):</label>
+            <input type="range" id="rand45sSlider" class="slider" min="0" max="100" step="1" value="50">
+            <div class="value-display">Current 45 chance: <span id="rand45sValue">0.5</span></div>
         </div>
 
         <!-- Buttons -->
         <div class="button-container">
             <button id="Walls" onclick="generateWalls(sizex, sizey)">Walls</button>
+            <button onclick="Random45s(grid)">45's</button>
             <button onclick="json()">Download JSON</button>
             <button onclick="png(grid)">Download PNG</button>
+            
+
         </div>
     </div>
 </body>
 </html>
 
 <script>
-
     // Get slider elements and value displays
     const randLeftSlider = document.getElementById('randLeftSlider');
     const randRightSlider = document.getElementById('randRightSlider');
     const randLeftValue = document.getElementById('randLeftValue');
     const randRightValue = document.getElementById('randRightValue');
-
+ const rand45sValue = document.getElementById('rand45sValue');
+ const rand45Slider = document.getElementById('rand45sSlider');
    randLeftSlider.addEventListener('input', function() {
       randLeft = (randLeftSlider.value / 100).toFixed(2); // Convert slider value to a decimal (0 to 1)
       randLeftValue.textContent = randLeft;
@@ -152,6 +177,12 @@
       randRightValue.textContent = randRight;
  
       generateWalls(sizex,sizey);
+    });
+ rand45sSlider.addEventListener('input', function() {
+      r45 = (rand45sSlider.value / 100).toFixed(2); // Convert slider value to a decimal (0 to 1)
+      rand45sValue.textContent = r45;
+ 
+      Random45s(grid);
     });
 const tileColors = [
     { id: 0, rgb: [0, 0, 0] },       // #000000 - Void
@@ -173,8 +204,8 @@ const tileColors = [
     { id: 16, rgb: [64, 80, 128] },  // #405080 - Top Right 45
     { id: 17, rgb: [64, 128, 80] }   // #408050 - Top Left 45
 ];
-
-
+let r45 = 0.5;
+let radius = 5;
 let Xo = -1;
 let Xn = -1;
 let Yo = -1;
@@ -183,6 +214,8 @@ let randRight = .5;
 let randLeft = .5;
 let sizex = 45;
 let sizey = 45;
+let centerY = (sizey-1)/2;
+let centerX = (sizex-1)/2;
 let insideWalls = [];
 let grid = Array(sizey).fill().map(() => Array(sizex).fill(0)); 
 function generateWalls(sizex, sizey) {
@@ -281,8 +314,7 @@ insideWalls.push({ x:sizex-rightX+Xn, y:sizey-rightY+Yn });
 grid[sizey-rightY+Yn][sizex-rightX+Xn] = 1; 
     }
 }
-
-highlight()
+highlight();
 renderGrid(grid, sizex, sizey, ctx, tileSize);
 }
 
@@ -297,14 +329,25 @@ function renderGrid(grid, sizex, sizey, ctx, tileSize) {
             if (tileColor) {
                 ctx.fillStyle = `rgb(${tileColor.rgb.join(",")})`; // Set the color based on RGB
             } else {
-                ctx.fillStyle = 'solid black'; // Default to white if no match
+                ctx.fillStyle = 'solid black'; // Default to solid black if no match
             }
 
-            ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize); // Draw the tile
+            // Draw the tile
+            ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize); 
+
+            // Check if the tile is 14 or 15 and call createTriangle accordingly
+            if (colorId === 14) {
+                createTriangle(y, x, 90); // Create triangle with 0 degree rotation
+            } else if (colorId === 15) {
+                createTriangle(y, x, 180); // Create triangle with 90 degree rotation
+            }else if (colorId === 16) {
+                createTriangle(y, x, 0); // Create triangle with 90 degree rotation
+            }else if (colorId === 17) {
+                createTriangle(y, x, 270); // Create triangle with 90 degree rotation
+            }
         }
     }
 }
-
 
 let insideTiles = []; // Public array to store tiles inside the walls
 function highlightTilesBetweenMatchingYs() {
@@ -445,5 +488,135 @@ function json() {
     link.click();
 }
 
+function createRandomYellowBoost(centerX, centerY, radius) {
+    // Validate radius to ensure it’s a positive number
+    if (radius <= 0) {
+        console.error("Radius must be greater than 0.");
+        return;
+    }
+
+    // Calculate the min and max bounds for the random position within the radius
+    let minX = centerX - radius;
+    let maxX = centerX + radius;
+    let minY = centerY - radius;
+    let maxY = centerY + radius;
+
+    // Generate random x and y coordinates within the bounds
+    let randomX = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
+    let randomY = Math.floor(Math.random() * (maxY - minY + 1)) + minY;
+
+    // Ensure the coordinates are within the grid bounds
+    if (randomX >= 0 && randomX < sizex && randomY >= 0 && randomY < sizey) {
+        // Place the Yellow Boost (ID 6) at the random coordinates
+        grid[sizey-randomY+Xo][sizex-randomX+Xo] = 6;
+        grid[randomY][randomX] = 6; // Yellow Boost tile ID
+    } else {
+        console.error("Random coordinates are out of bounds.");
+    }
+
+    // Optionally, you can render the grid again to show the boost placement
+    renderGrid(grid, sizex, sizey, canvas.getContext('2d'), 10);
+}
+
+function Random45s(grid) {
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const tileSize = 10;
+    convertSpecialTilesToOne(grid);
+    // Loop through every tile, including the last row and column
+    for (let i = 0; i < grid.length; i++) {
+        for (let j = 0; j < grid[i].length; j++) {
+            // Check the patterns starting at grid[i][j]
+            
+            // Pattern 1: 2,1 and 1,1 (2 is at [i,j])
+            if (grid[i][j] === 2 && grid[i + 1] && grid[i + 1][j] === 1 && grid[i][j + 1] === 1 && grid[i + 1][j + 1] === 1) {
+                if (Math.random() <= r45) {
+                    grid[i][j] = 14;  // Change to 14 with 50% probability
+                }
+            }
+            // Pattern 2: 1,2 and 1,1 (2 is at [i,j + 1])
+            else if (grid[i][j] === 2 && grid[i + 1][j] === 1 && grid[i + 1][j - 1] === 1 && grid[i][j - 1] === 1) {
+                if (Math.random() <= r45) {
+                    grid[i][j] = 15;  // Change to 15 with 50% probability
+                }
+            }
+            // Pattern 3: 1,1 and 2,1 (2 is at [i + 1,j])
+            else if (grid[i][j] === 2 && grid[i - 1][j] === 1 && grid[i - 1][j - 1] === 1 && grid[i][j - 1] === 1) {
+                if (Math.random() <= r45) {
+                    grid[i][j] = 17;  // Change to 17 with 50% probability
+                }
+            }
+            // Pattern 4: 1,1 and 1,2 (2 is at [i + 1, j + 1])
+            else if (grid[i][j] === 2 && grid[i][j + 1] === 1 && grid[i - 1] && grid[i - 1][j + 1] === 1 && grid[i - 1][j] === 1) {
+                if (Math.random() <= r45) {
+                    grid[i][j] = 16;  // Change to 16 with 50% probability
+                }
+            }
+        }
+    }
+renderGrid(grid, sizex, sizey, ctx, tileSize);
+}
+
+        // Function to draw a square cut diagonally with rotation
+  function createTriangle(y, x, rotate) {
+    const squareSize = 10; // size of the square (scaled by 10 for the grid)
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Multiply x and y by 10 to position based on a grid
+    const scaledX = x * 10;
+    const scaledY = y * 10;
+
+    // Save the current context state (so we can restore it after rotation)
+    ctx.save();
+
+    // Move to the position where the square's top-left corner will be
+    ctx.translate(scaledX + squareSize / 2, scaledY + squareSize / 2); // move to the center of the square
+    ctx.rotate(rotate * Math.PI / 180); // rotate by the specified angle in degrees
+    ctx.translate(-squareSize / 2, -squareSize / 2); // move back to the original position
+
+    // Clip the area within the square to avoid the border
+    ctx.beginPath();
+    ctx.rect(0, 0, squareSize, squareSize); // Define the clipping area
+    ctx.clip(); // Clip the drawing to this area
+
+    // Draw the square (background)
+    ctx.beginPath();
+    ctx.rect(0, 0, squareSize, squareSize); // Square at (0, 0) with size squareSize
+    ctx.fillStyle = 'rgb(212, 212, 212)';  // fill color for the square
+    ctx.fill();
+    ctx.lineWidth = 0;
+    ctx.strokeStyle = 'rgb(212, 212, 212)';
+    ctx.stroke();
+
+    // Draw the triangle (above the diagonal)
+    ctx.beginPath();
+    ctx.moveTo(0, 0); // top-left corner
+    ctx.lineTo(squareSize, 0); // top-right corner
+    ctx.lineTo(squareSize, squareSize); // bottom-right corner
+    ctx.closePath();
+    ctx.fillStyle = 'rgb(120, 120, 120)'; // color of the first triangle
+    ctx.fill();
+
+    // Restore the context state (to undo the translation and rotation)
+    ctx.restore();
+}
+
+function convertSpecialTilesToOne(grid) {
+    // Loop through the entire grid
+    for (let i = 0; i < grid.length; i++) {
+        for (let j = 0; j < grid[i].length; j++) {
+            // Check if the tile is 14, 15, 16, or 17, and replace it with 1
+            if (grid[i][j] === 14 || grid[i][j] === 15 || grid[i][j] === 16 || grid[i][j] === 17) {
+                grid[i][j] = 2;
+            }
+        }
+    }
+}
+
+  //{ id: 14, rgb: [128, 64, 112] }, // #804070 - Bottom Right 45
+   // { id: 15, rgb: [128, 112, 64] }, // #807040 - Bottom Left 45
+    //{ id: 16, rgb: [64, 80, 128] },  // #405080 - Top Right 45
+    //{ id: 17, rgb: [64, 128, 80] }   // #408050 - Top Left 45
 </script>
 
