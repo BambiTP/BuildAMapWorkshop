@@ -9,13 +9,11 @@
     #canvas2 {
       display: none;
     }
-
     #mapCanvas {
       border: 2px solid #333;
       margin-top: 20px;
       display: block;
     }
-
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
@@ -26,7 +24,6 @@
       align-items: flex-start;
       gap: 30px;
     }
-
     .controls {
       display: flex;
       flex-direction: column;
@@ -34,28 +31,23 @@
       max-width: 250px;
       margin-top: 20px;
     }
-
     .slider-container {
       margin: 10px 0;
       width: 100%;
     }
-
     .slider-container label {
       font-size: 1em;
       margin-bottom: 5px;
       text-align: center;
     }
-
     .slider-container .slider {
       width: 100%;
       margin: 5px 0;
     }
-
     .value-display {
       font-size: 0.9em;
       color: #555;
     }
-
     button {
       background-color: #007bff;
       color: white;
@@ -67,34 +59,27 @@
       border-radius: 5px;
       transition: background-color 0.3s ease;
     }
-
     button:hover {
       background-color: #0056b3;
     }
-
     button:active {
       background-color: #003f7f;
     }
-
     .button-container {
       margin-top: 20px;
     }
-
     #Walls {
       margin-top: 20px;
     }
-
     #github-button {
       position: fixed;
-      bottom: 20px; /* Adjust the distance from the bottom of the screen */
-      right: 20px;  /* Adjust the distance from the right of the screen */
-      z-index: 9999; /* Make sure the button is above other content */
-      text-decoration: none; /* Remove underline from link */
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      text-decoration: none;
     }
-
-    /* Optional: Styling the button image (if desired) */
     #github-button img {
-      max-width: 150px; /* You can adjust the button size */
+      max-width: 150px;
       height: auto;
     }
   </style>
@@ -158,17 +143,17 @@
     <!-- Buttons -->
     <div class="button-container">
       <button id="Walls" onclick="generateWalls(sizex, sizey)">Walls</button>
-      <button onclick="Random45s(grid)">45's</button>
+      <button onclick="Random45sSym(grid)">45's</button>
       <button onclick="json()">Download JSON</button>
       <button onclick="png(grid)">Download PNG</button>
     </div>
   </div>
 
   <script>
-    // Global variable to control grid lines visibility (default true)
+    // Global variable to control grid lines visibility
     let showGrid = true;
 
-    // Get slider elements and value displays
+    // Slider elements and value displays
     const randLeftSlider = document.getElementById('randLeftSlider');
     const randRightSlider = document.getElementById('randRightSlider');
     const randLeftValue = document.getElementById('randLeftValue');
@@ -178,7 +163,7 @@
     const gridToggle = document.getElementById('gridToggle');
 
     randLeftSlider.addEventListener('input', function() {
-      randLeft = (randLeftSlider.value / 100).toFixed(2); // Convert slider value to a decimal (0 to 1)
+      randLeft = (randLeftSlider.value / 100).toFixed(2);
       randLeftValue.textContent = randLeft;
       generateWalls(sizex, sizey);
     });
@@ -192,15 +177,15 @@
     rand45Slider.addEventListener('input', function() {
       r45 = (rand45Slider.value / 100).toFixed(2);
       rand45sValue.textContent = r45;
-      Random45s(grid);
+      Random45sSym(grid);
     });
 
-    // Toggle grid lines when checkbox changes
     gridToggle.addEventListener('change', function() {
       showGrid = gridToggle.checked;
       renderGrid(grid, sizex, sizey, document.getElementById('mapCanvas').getContext('2d'), 10);
     });
 
+    // Tile definitions (tile id and corresponding RGB color)
     const tileColors = [
       { id: 0, rgb: [0, 0, 0] },       // Void
       { id: 1, rgb: [120, 120, 120] }, // Wall
@@ -222,21 +207,17 @@
       { id: 17, rgb: [64, 128, 80] }   // Top Left 45
     ];
 
+    // Global variables for the generator
     let r45 = 0.5;
-    let radius = 5;
-    let Xo = -1;
-    let Xn = -1;
-    let Yo = -1;
-    let Yn = -1;
-    let randRight = 0.5;
-    let randLeft = 0.5;
-    let sizex = 45;
-    let sizey = 45;
+    let Xo = -1, Xn = -1, Yo = -1, Yn = -1;
+    let randRight = 0.5, randLeft = 0.5;
+    let sizex = 45, sizey = 45;
     let centerY = (sizey - 1) / 2;
     let centerX = (sizex - 1) / 2;
     let insideWalls = [];
     let grid = Array(sizey).fill().map(() => Array(sizex).fill(0));
 
+    // Generate walls (using your original approach)
     function generateWalls(sizex, sizey) {
       grid = Array(sizey).fill().map(() => Array(sizex).fill(0));
       insideWalls = [];
@@ -339,27 +320,21 @@
       renderGrid(grid, sizex, sizey, ctx, tileSize);
     }
 
+    // Render the grid onto the canvas
     function renderGrid(grid, sizex, sizey, ctx, tileSize) {
       ctx.clearRect(0, 0, sizex * tileSize, sizey * tileSize);
       for (let y = 0; y < sizey; y++) {
         for (let x = 0; x < sizex; x++) {
           let colorId = grid[y][x];
           let tileColor = tileColors.find(tile => tile.id === colorId);
-          if (tileColor) {
-            ctx.fillStyle = `rgb(${tileColor.rgb.join(",")})`;
-          } else {
-            ctx.fillStyle = 'black';
-          }
+          ctx.fillStyle = tileColor ? `rgb(${tileColor.rgb.join(",")})` : 'black';
           ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
-          
-          // Draw grid lines if enabled
           if (showGrid) {
             ctx.strokeStyle = 'rgba(0,0,0,0.2)';
             ctx.lineWidth = 1;
             ctx.strokeRect(x * tileSize, y * tileSize, tileSize, tileSize);
           }
-          
-          // Draw triangles for special tiles
+          // Draw triangles for special 45's tiles (if desired)
           if (colorId === 14) {
             createTriangle(y, x, 90);
           } else if (colorId === 15) {
@@ -373,6 +348,7 @@
       }
     }
 
+    // Highlight interior floor tiles between matching wall rows
     let insideTiles = [];
     function highlightTilesBetweenMatchingYs() {
       const canvas = document.getElementById('mapCanvas');
@@ -398,133 +374,76 @@
         }
       }
     }
-
     function highlight() {
       highlightTilesBetweenMatchingYs();
     }
 
-    generateWalls(sizex, sizey);
-
-    const sizexInput = document.getElementById('sizexInput');
-    const sizeyInput = document.getElementById('sizeyInput');
-    const canvas = document.getElementById('mapCanvas');
-
-    function updateGridSize() {
-      sizex = parseInt(sizexInput.value);
-      sizey = parseInt(sizeyInput.value);
-      grid = Array(sizey).fill().map(() => Array(sizex).fill(0));
-      updateCanvasSize();
-      generateWalls(sizex, sizey);
-    }
-
-    function updateCanvasSize() {
-      canvas.width = sizex * 10;
-      canvas.height = sizey * 10;
-    }
-
-    sizexInput.addEventListener('input', updateGridSize);
-    sizeyInput.addEventListener('input', updateGridSize);
-
-    function png(grid) {
-      const canvas2 = document.getElementById('canvas2');
-      const ctx2 = canvas2.getContext('2d');
-      const sizeX = grid[0].length;
-      const sizeY = grid.length;
-      canvas2.width = sizeX;
-      canvas2.height = sizeY;
-      for (let y = 0; y < sizeY; y++) {
-        for (let x = 0; x < sizeX; x++) {
-          const tileId = grid[y][x];
-          const color = tileColors.find(tile => tile.id === tileId);
-          if (color) {
-            ctx2.fillStyle = `rgb(${color.rgb.join(',')})`;
-            ctx2.fillRect(x, y, 1, 1);
+    // --- NEW 45's Routine with 180° Rotational Symmetry ---
+    // We'll use the same conditions as your original Random45s but process only the upper half
+    // and then mirror those tiles into the lower half using a 180° rotation mapping.
+    // In a 180° rotation for these triangle tiles:
+    //   Top Left (17) ↔ Bottom Right (14)
+    //   Top Right (16) ↔ Bottom Left (15)
+    const mapping180 = { 17: 14, 14: 17, 16: 15, 15: 16 };
+    function Random45sSym(grid) {
+      // First, convert any previously placed special tiles back to floor (tile id 2)
+      convertSpecialTilesToOne(grid);
+      // Process only the upper half of the grid (avoid the very top row for neighbor checks)
+      const half = Math.floor(sizey / 2);
+      for (let i = 1; i < half; i++) {
+        for (let j = 1; j < sizex - 1; j++) {
+          if (grid[i][j] === 2) {
+            // Check conditions as in your original Random45s:
+            if (grid[i+1] && grid[i+1][j] === 1 && grid[i][j+1] === 1 && grid[i+1][j+1] === 1) {
+              if (Math.random() <= r45) {
+                grid[i][j] = 14; // Bottom Right 45
+              }
+            }
+            else if (grid[i+1] && grid[i+1][j] === 1 && grid[i+1][j-1] === 1 && grid[i][j-1] === 1) {
+              if (Math.random() <= r45) {
+                grid[i][j] = 15; // Bottom Left 45
+              }
+            }
+            else if (grid[i-1][j] === 1 && grid[i-1][j-1] === 1 && grid[i][j-1] === 1) {
+              if (Math.random() <= r45) {
+                grid[i][j] = 17; // Top Left 45
+              }
+            }
+            else if (grid[i][j+1] === 1 && grid[i-1] && grid[i-1][j+1] === 1 && grid[i-1][j] === 1) {
+              if (Math.random() <= r45) {
+                grid[i][j] = 16; // Top Right 45
+              }
+            }
           }
         }
       }
-      const pngDataUrl = canvas2.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = pngDataUrl;
-      link.download = 'map.png';
-      link.click();
-    }
-
-    function json() {
-      var jsonData = {
-        info: {
-          name: "unknown",
-          author: "unknown",
-          gameMode: "normal"
-        },
-        switches: {},
-        fields: {},
-        portals: {},
-        marsballs: [],
-        spawnPoints: {
-          red: [],
-          blue: []
+      // Mirror the placed 45's from the upper half to the lower half using 180° rotation.
+      for (let i = 0; i < half; i++) {
+        for (let j = 0; j < sizex; j++) {
+          if ([14,15,16,17].includes(grid[i][j])) {
+            let iSym = sizey - 1 - i;
+            let jSym = sizex - 1 - j;
+            grid[iSym][jSym] = mapping180[grid[i][j]];
+          }
         }
-      };
-      var jsonString = JSON.stringify(jsonData, null, 2);
-      var blob = new Blob([jsonString], { type: 'application/json' });
-      var link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'data.json';
-      link.click();
-    }
-
-    function createRandomYellowBoost(centerX, centerY, radius) {
-      if (radius <= 0) {
-        console.error("Radius must be greater than 0.");
-        return;
       }
-      let minX = centerX - radius;
-      let maxX = centerX + radius;
-      let minY = centerY - radius;
-      let maxY = centerY + radius;
-      let randomX = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
-      let randomY = Math.floor(Math.random() * (maxY - minY + 1)) + minY;
-      if (randomX >= 0 && randomX < sizex && randomY >= 0 && randomY < sizey) {
-        grid[sizey - randomY + Xo][sizex - randomX + Xo] = 6;
-        grid[randomY][randomX] = 6;
-      } else {
-        console.error("Random coordinates are out of bounds.");
-      }
-      renderGrid(grid, sizex, sizey, canvas.getContext('2d'), 10);
+      renderGrid(grid, sizex, sizey, document.getElementById('mapCanvas').getContext('2d'), 10);
     }
+    // --- End NEW 45's Routine ---
 
-    function Random45s(grid) {
-      const canvas = document.getElementById('mapCanvas');
-      const ctx = canvas.getContext('2d');
-      const tileSize = 10;
-      convertSpecialTilesToOne(grid);
+    // Utility: Convert any special 45's tiles back to floor (tile id 2)
+    function convertSpecialTilesToOne(grid) {
       for (let i = 0; i < grid.length; i++) {
         for (let j = 0; j < grid[i].length; j++) {
-          if (grid[i][j] === 2 && grid[i + 1] && grid[i + 1][j] === 1 && grid[i][j + 1] === 1 && grid[i + 1][j + 1] === 1) {
-            if (Math.random() <= r45) {
-              grid[i][j] = 14;
-            }
-          }
-          else if (grid[i][j] === 2 && grid[i + 1][j] === 1 && grid[i + 1][j - 1] === 1 && grid[i][j - 1] === 1) {
-            if (Math.random() <= r45) {
-              grid[i][j] = 15;
-            }
-          }
-          else if (grid[i][j] === 2 && grid[i - 1][j] === 1 && grid[i - 1][j - 1] === 1 && grid[i][j - 1] === 1) {
-            if (Math.random() <= r45) {
-              grid[i][j] = 17;
-            }
-          }
-          else if (grid[i][j] === 2 && grid[i][j + 1] === 1 && grid[i - 1] && grid[i - 1][j + 1] === 1 && grid[i - 1][j] === 1) {
-            if (Math.random() <= r45) {
-              grid[i][j] = 16;
-            }
+          if ([14,15,16,17].includes(grid[i][j])) {
+            grid[i][j] = 2;
           }
         }
       }
-      renderGrid(grid, sizex, sizey, ctx, tileSize);
     }
 
+    // Draw a triangle (for 45's tiles) on the main canvas.
+    // The parameter 'rotate' (in degrees) controls the triangle's orientation.
     function createTriangle(y, x, rotate) {
       const squareSize = 10;
       const canvas = document.getElementById('mapCanvas');
@@ -555,14 +474,96 @@
       ctx.restore();
     }
 
-    function convertSpecialTilesToOne(grid) {
-      for (let i = 0; i < grid.length; i++) {
-        for (let j = 0; j < grid[i].length; j++) {
-          if (grid[i][j] === 14 || grid[i][j] === 15 || grid[i][j] === 16 || grid[i][j] === 17) {
-            grid[i][j] = 2;
+    // Initial generation
+    generateWalls(sizex, sizey);
+
+    // Update grid size when inputs change
+    const sizexInput = document.getElementById('sizexInput');
+    const sizeyInput = document.getElementById('sizeyInput');
+    const canvas = document.getElementById('mapCanvas');
+    function updateGridSize() {
+      sizex = parseInt(sizexInput.value);
+      sizey = parseInt(sizeyInput.value);
+      grid = Array(sizey).fill().map(() => Array(sizex).fill(0));
+      updateCanvasSize();
+      generateWalls(sizex, sizey);
+    }
+    function updateCanvasSize() {
+      canvas.width = sizex * 10;
+      canvas.height = sizey * 10;
+    }
+    sizexInput.addEventListener('input', updateGridSize);
+    sizeyInput.addEventListener('input', updateGridSize);
+
+    // PNG download
+    function png(grid) {
+      const canvas2 = document.getElementById('canvas2');
+      const ctx2 = canvas2.getContext('2d');
+      const sizeX = grid[0].length;
+      const sizeY = grid.length;
+      canvas2.width = sizeX;
+      canvas2.height = sizeY;
+      for (let y = 0; y < sizeY; y++) {
+        for (let x = 0; x < sizeX; x++) {
+          const tileId = grid[y][x];
+          const color = tileColors.find(tile => tile.id === tileId);
+          if (color) {
+            ctx2.fillStyle = `rgb(${color.rgb.join(',')})`;
+            ctx2.fillRect(x, y, 1, 1);
           }
         }
       }
+      const pngDataUrl = canvas2.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = pngDataUrl;
+      link.download = 'map.png';
+      link.click();
+    }
+
+    // JSON download (dummy data for now)
+    function json() {
+      var jsonData = {
+        info: {
+          name: "unknown",
+          author: "unknown",
+          gameMode: "normal"
+        },
+        switches: {},
+        fields: {},
+        portals: {},
+        marsballs: [],
+        spawnPoints: {
+          red: [],
+          blue: []
+        }
+      };
+      var jsonString = JSON.stringify(jsonData, null, 2);
+      var blob = new Blob([jsonString], { type: 'application/json' });
+      var link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'data.json';
+      link.click();
+    }
+
+    // Example: create a random yellow boost (tile id 6)
+    function createRandomYellowBoost(centerX, centerY, radius) {
+      if (radius <= 0) {
+        console.error("Radius must be greater than 0.");
+        return;
+      }
+      let minX = centerX - radius;
+      let maxX = centerX + radius;
+      let minY = centerY - radius;
+      let maxY = centerY + radius;
+      let randomX = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
+      let randomY = Math.floor(Math.random() * (maxY - minY + 1)) + minY;
+      if (randomX >= 0 && randomX < sizex && randomY >= 0 && randomY < sizey) {
+        grid[sizey - randomY - 1][sizex - randomX - 1] = 6;
+        grid[randomY][randomX] = 6;
+      } else {
+        console.error("Random coordinates are out of bounds.");
+      }
+      renderGrid(grid, sizex, sizey, canvas.getContext('2d'), 10);
     }
   </script>
 </body>
