@@ -71,6 +71,14 @@
     #Walls {
       margin-top: 20px;
     }
+    .seed-row { display: flex; gap: 6px; align-items: center; }
+    .seed-row input { width: 90px; }
+    .mix { margin-top: 18px; padding-top: 10px; border-top: 1px solid #ccc; width: 100%; }
+    .mix h3 { margin: 0 0 6px; font-size: 1em; }
+    .mix table { border-collapse: collapse; }
+    .mix td { padding: 2px 4px; font-size: 0.9em; }
+    .mix input { width: 56px; }
+    #mixStatus { font-size: 0.85em; color: #555; margin-top: 4px; }
     #github-button {
       position: fixed;
       bottom: 20px;
@@ -140,10 +148,35 @@
       <label for="gridToggle">Show Grid Lines</label>
     </div>
 
+    <!-- Seed: blank = random every time; a number always gives the same map (walls + 45's) -->
+    <div class="slider-container">
+      <label for="seedInput">Seed (blank = random):</label>
+      <div class="seed-row">
+        <input type="number" id="seedInput" placeholder="random">
+        <button id="newSeed" title="pick a random seed">New seed</button>
+      </div>
+    </div>
+
+    <!-- Mix: roll random settings inside these ranges -->
+    <div class="mix">
+      <h3>Mix</h3>
+      <table>
+        <tr><td></td><td>min</td><td>max</td></tr>
+        <tr><td>Size X</td><td><input type="number" id="mixXmin" value="31" step="2"></td><td><input type="number" id="mixXmax" value="59" step="2"></td></tr>
+        <tr><td>Size Y</td><td><input type="number" id="mixYmin" value="31" step="2"></td><td><input type="number" id="mixYmax" value="59" step="2"></td></tr>
+        <tr><td>Left Up %</td><td><input type="number" id="mixLmin" value="30"></td><td><input type="number" id="mixLmax" value="70"></td></tr>
+        <tr><td>Right Up %</td><td><input type="number" id="mixRmin" value="30"></td><td><input type="number" id="mixRmax" value="70"></td></tr>
+        <tr><td>45 chance %</td><td><input type="number" id="mix45min" value="0"></td><td><input type="number" id="mix45max" value="100"></td></tr>
+        <tr><td title="floor tiles in the biggest connected area">Open tiles</td><td><input type="number" id="mixOmin" value="300"></td><td><input type="number" id="mixOmax" placeholder="any"></td></tr>
+      </table>
+      <button id="mixButton">Mix</button>
+      <div id="mixStatus"></div>
+    </div>
+
     <!-- Buttons -->
     <div class="button-container">
-      <button id="Walls" onclick="generateWalls(sizex, sizey)">Walls</button>
-      <button onclick="Random45sSym(grid)">45's</button>
+      <button id="Walls" onclick="regenWalls()">Walls</button>
+      <button onclick="regen45s()">45's</button>
       <button onclick="json()">Download JSON</button>
       <button onclick="png(grid)">Download PNG</button>
     </div>
@@ -165,19 +198,19 @@
     randLeftSlider.addEventListener('input', function() {
       randLeft = (randLeftSlider.value / 100).toFixed(2);
       randLeftValue.textContent = randLeft;
-      generateWalls(sizex, sizey);
+      regenWalls();
     });
 
     randRightSlider.addEventListener('input', function() {
       randRight = (randRightSlider.value / 100).toFixed(2);
       randRightValue.textContent = randRight;
-      generateWalls(sizex, sizey);
+      regenWalls();
     });
 
     rand45Slider.addEventListener('input', function() {
       r45 = (rand45Slider.value / 100).toFixed(2);
       rand45sValue.textContent = r45;
-      Random45sSym(grid);
+      regen45s();
     });
 
     gridToggle.addEventListener('change', function() {
@@ -217,6 +250,39 @@
     let insideWalls = [];
     let grid = Array(sizey).fill().map(() => Array(sizex).fill(0));
 
+    // Random numbers for the generator: Math.random, or a seeded RNG (mulberry32, same as
+    // chase-playground's generateMap, so a seed gives the same map in both)
+    let random = Math.random;
+    function makeRng(seed) {
+      let a = Number(seed) >>> 0;
+      return function () {
+        a = (a + 0x6D2B79F5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function seedValue() {
+      const v = document.getElementById('seedInput').value;
+      return v === '' ? null : Number(v);
+    }
+    // with a seed, walls and 45's come from one seeded stream, so the map is always the same
+    function generateSeeded(seed) {
+      random = makeRng(seed);
+      generateWalls(sizex, sizey);
+      Random45sSym(grid);
+      random = Math.random;
+    }
+    function regenWalls() {
+      const seed = seedValue();
+      if (seed === null) generateWalls(sizex, sizey); else generateSeeded(seed);
+    }
+    function regen45s() {
+      const seed = seedValue();
+      if (seed === null) Random45sSym(grid); else generateSeeded(seed);
+    }
+
     // Generate walls (using your original approach)
     function generateWalls(sizex, sizey) {
       grid = Array(sizey).fill().map(() => Array(sizex).fill(0));
@@ -249,7 +315,7 @@
 
       // Generate the left wall
       while (leftX > 0 && leftY > (sizey - 1) / 2) {
-        if (Math.random() <= randLeft) {
+        if (random() <= randLeft) {
           leftY--;
           insideWalls.push({ x: leftX, y: leftY });
           insideWalls.push({ x: sizex - leftX + Xo, y: sizey - leftY + Yo });
@@ -282,7 +348,7 @@
 
       // Generate the right wall
       while (rightX < sizex - 1 && rightY > Math.floor((sizey - 1) / 2)) {
-        if (Math.random() <= randRight) {
+        if (random() <= randRight) {
           rightY--;
           insideWalls.push({ x: rightX, y: rightY });
           insideWalls.push({ x: sizex - rightX + Xn, y: sizey - rightY + Yn });
@@ -395,22 +461,22 @@
           if (grid[i][j] === 2) {
             // Check conditions as in your original Random45s:
             if (grid[i+1] && grid[i+1][j] === 1 && grid[i][j+1] === 1 && grid[i+1][j+1] === 1) {
-              if (Math.random() <= r45) {
+              if (random() <= r45) {
                 grid[i][j] = 14; // Bottom Right 45
               }
             }
             else if (grid[i+1] && grid[i+1][j] === 1 && grid[i+1][j-1] === 1 && grid[i][j-1] === 1) {
-              if (Math.random() <= r45) {
+              if (random() <= r45) {
                 grid[i][j] = 15; // Bottom Left 45
               }
             }
             else if (grid[i-1][j] === 1 && grid[i-1][j-1] === 1 && grid[i][j-1] === 1) {
-              if (Math.random() <= r45) {
+              if (random() <= r45) {
                 grid[i][j] = 17; // Top Left 45
               }
             }
             else if (grid[i][j+1] === 1 && grid[i-1] && grid[i-1][j+1] === 1 && grid[i-1][j] === 1) {
-              if (Math.random() <= r45) {
+              if (random() <= r45) {
                 grid[i][j] = 16; // Top Right 45
               }
             }
@@ -486,7 +552,7 @@
       sizey = parseInt(sizeyInput.value);
       grid = Array(sizey).fill().map(() => Array(sizex).fill(0));
       updateCanvasSize();
-      generateWalls(sizex, sizey);
+      regenWalls();
     }
     function updateCanvasSize() {
       canvas.width = sizex * 10;
@@ -494,6 +560,72 @@
     }
     sizexInput.addEventListener('input', updateGridSize);
     sizeyInput.addEventListener('input', updateGridSize);
+
+    // Seed controls
+    document.getElementById('seedInput').addEventListener('change', regenWalls);
+    document.getElementById('newSeed').addEventListener('click', function() {
+      document.getElementById('seedInput').value = Math.floor(Math.random() * 1000000);
+      regenWalls();
+    });
+
+    // Mix: pick random settings inside the ranges, and reroll until the map's open area
+    // (floor tiles in the biggest connected area) is inside the Open tiles range.
+    // The picked settings go into the controls above, so you can keep tweaking from there.
+    function openTiles() {
+      const seen = grid.map(row => row.map(() => false));
+      let best = 0;
+      for (let y = 0; y < sizey; y++) for (let x = 0; x < sizex; x++) {
+        if (seen[y][x] || grid[y][x] !== 2) continue;
+        let count = 0;
+        const stack = [[x, y]];
+        seen[y][x] = true;
+        while (stack.length) {
+          const [cx, cy] = stack.pop();
+          count++;
+          for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
+            if (nx >= 0 && ny >= 0 && nx < sizex && ny < sizey && !seen[ny][nx] && grid[ny][nx] === 2) { seen[ny][nx] = true; stack.push([nx, ny]); }
+          }
+        }
+        best = Math.max(best, count);
+      }
+      return best;
+    }
+
+    function mix() {
+      const val = (id) => Number(document.getElementById(id).value);
+      const between = (a, b) => Math.round(Math.min(a, b) + Math.random() * Math.abs(b - a));
+      const odd = (n) => Math.max(5, n % 2 ? n : n + 1);
+      const oMin = document.getElementById('mixOmin').value === '' ? 0 : val('mixOmin');
+      const oMax = document.getElementById('mixOmax').value === '' ? Infinity : val('mixOmax');
+      const status = document.getElementById('mixStatus');
+      for (let i = 0; i < 300; i++) {
+        const seed = Math.floor(Math.random() * 1000000);
+        sizex = odd(between(val('mixXmin'), val('mixXmax')));
+        sizey = odd(between(val('mixYmin'), val('mixYmax')));
+        randLeft = (between(val('mixLmin'), val('mixLmax')) / 100).toFixed(2);
+        randRight = (between(val('mixRmin'), val('mixRmax')) / 100).toFixed(2);
+        r45 = (between(val('mix45min'), val('mix45max')) / 100).toFixed(2);
+        updateCanvasSize();
+        generateSeeded(seed);
+        const open = openTiles();
+        if (open < oMin || open > oMax) continue;
+        // show the picked settings in the controls
+        sizexInput.value = sizex; sizeyInput.value = sizey;
+        randLeftSlider.value = Math.round(randLeft * 100); randLeftValue.textContent = randLeft;
+        randRightSlider.value = Math.round(randRight * 100); randRightValue.textContent = randRight;
+        rand45Slider.value = Math.round(r45 * 100); rand45sValue.textContent = r45;
+        document.getElementById('seedInput').value = seed;
+        status.textContent = `seed ${seed} · ${sizex}×${sizey} · ${open} open tiles`;
+        return;
+      }
+      status.textContent = 'No map in 300 tries fits these ranges. Try a wider Open tiles range.';
+      // put back the map from the controls
+      randLeft = (randLeftSlider.value / 100).toFixed(2);
+      randRight = (randRightSlider.value / 100).toFixed(2);
+      r45 = (rand45Slider.value / 100).toFixed(2);
+      updateGridSize();
+    }
+    document.getElementById('mixButton').addEventListener('click', mix);
 
     // PNG download
     function png(grid) {
