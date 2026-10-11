@@ -5,101 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wall Generator</title>
   <style>
-    /* Hide the second canvas */
-    #canvas2 {
-      display: none;
-    }
-    #mapCanvas {
-      border: 2px solid #333;
-      margin-top: 20px;
-      display: block;
-    }
+    /* Everything fits in the window: the map scales to the space left, the controls are one compact column */
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
+      font-size: 14px;
       background-color: #f4f4f4;
       color: #333;
       display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 30px;
+      gap: 16px;
+      padding: 12px;
+      overflow: hidden;
     }
+    .canvas-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #mapCanvas {
+      border: 2px solid #333;
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    /* Hide the second canvas */
+    #canvas2 { display: none; }
     .controls {
+      flex: none;
+      width: 300px;
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
-      max-width: 250px;
-      margin-top: 20px;
+      gap: 8px;
+      overflow-y: auto;   /* only if the window is really short */
     }
-    .slider-container {
-      margin: 10px 0;
-      width: 100%;
-    }
-    .slider-container label {
-      font-size: 1em;
-      margin-bottom: 5px;
-      text-align: center;
-    }
-    .slider-container .slider {
-      width: 100%;
-      margin: 5px 0;
-    }
-    .value-display {
-      font-size: 0.9em;
-      color: #555;
-    }
+    .row { display: flex; align-items: center; gap: 6px; }
+    .row input[type=number] { width: 60px; }
+    .slider-row { display: grid; grid-template-columns: 70px 1fr 36px; align-items: center; gap: 6px; }
+    .slider-row input { width: 100%; margin: 0; }
+    .value-display { font-size: 0.9em; color: #555; text-align: right; }
     button {
       background-color: #007bff;
       color: white;
       border: none;
-      padding: 8px 15px;
-      margin: 8px 0;
+      padding: 6px 12px;
       cursor: pointer;
       font-size: 1em;
       border-radius: 5px;
       transition: background-color 0.3s ease;
     }
-    button:hover {
-      background-color: #0056b3;
-    }
-    button:active {
-      background-color: #003f7f;
-    }
-    .button-container {
-      margin-top: 20px;
-    }
-    #Walls {
-      margin-top: 20px;
-    }
-    .seed-row { display: flex; gap: 6px; align-items: center; }
-    .seed-row input { width: 90px; }
-    .mix { margin-top: 18px; padding-top: 10px; border-top: 1px solid #ccc; width: 100%; }
-    .mix h3 { margin: 0 0 6px; font-size: 1em; }
-    .mix table { border-collapse: collapse; }
-    .mix td { padding: 2px 4px; font-size: 0.9em; }
+    button:hover { background-color: #0056b3; }
+    button:active { background-color: #003f7f; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+    .section { border-top: 1px solid #ccc; padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .section h3 { margin: 0; font-size: 1em; }
+    .mix table { border-collapse: collapse; align-self: flex-start; }
+    .mix td { padding: 1px 4px 1px 0; font-size: 0.9em; }
     .mix input { width: 56px; }
-    #mixStatus { font-size: 0.85em; color: #555; margin-top: 4px; }
-    #github-button {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 9999;
-      text-decoration: none;
-    }
-    #github-button img {
-      max-width: 150px;
-      height: auto;
-    }
+    #mixStatus { font-size: 0.85em; color: #555; min-height: 1.2em; }
+    #github-button { text-decoration: none; margin-top: auto; }
+    #github-button img { max-width: 150px; height: auto; display: block; }
   </style>
 </head>
 <body>
-  <!-- GitHub button -->
-  <a href="https://github.com/BambiTP/BuildAMapWorkshop" id="github-button" target="_blank">
-    <img src="https://img.shields.io/badge/BuildAMapWorkshop-GitHub-blue?logo=github&logoColor=white" alt="GitHub" />
-  </a>
-
   <!-- Canvas (Left side) -->
-  <div>
+  <div class="canvas-wrap">
     <canvas id="mapCanvas" width="450" height="450"></canvas>
     <!-- Hidden canvas for PNG download -->
     <canvas id="canvas2"></canvas>
@@ -107,79 +79,68 @@
 
   <!-- Controls (Right side) -->
   <div class="controls">
-    <!-- Input for sizex -->
-    <div class="slider-container">
-      <label for="sizexInput">Size X (Width):</label>
-      <input type="number" id="sizexInput" class="slider" min="1" max="100" value="45" step="2"
-             pattern="([1-9][0-9]*[13579])">
+    <div class="row">
+      <label for="sizexInput">Size</label>
+      <input type="number" id="sizexInput" min="1" max="100" value="45" step="2" title="width (odd)">
+      ×
+      <input type="number" id="sizeyInput" min="1" max="100" value="45" step="2" title="height (odd)">
     </div>
 
-    <!-- Input for sizey -->
-    <div class="slider-container">
-      <label for="sizeyInput">Size Y (Height):</label>
-      <input type="number" id="sizeyInput" class="slider" min="1" max="100" value="45" step="2"
-             pattern="([1-9][0-9]*[13579])">
+    <div class="slider-row">
+      <label for="randLeftSlider">Left up</label>
+      <input type="range" id="randLeftSlider" min="0" max="100" step="1" value="50">
+      <span class="value-display" id="randLeftValue">0.5</span>
     </div>
-
-    <!-- Slider for randLeft -->
-    <div class="slider-container">
-      <label for="randLeftSlider">randLeft (0 to 1):</label>
-      <input type="range" id="randLeftSlider" class="slider" min="0" max="100" step="1" value="50">
-      <div class="value-display">Current Left Up%: <span id="randLeftValue">0.5</span></div>
+    <div class="slider-row">
+      <label for="randRightSlider">Right up</label>
+      <input type="range" id="randRightSlider" min="0" max="100" step="1" value="50">
+      <span class="value-display" id="randRightValue">0.5</span>
     </div>
-
-    <!-- Slider for randRight -->
-    <div class="slider-container">
-      <label for="randRightSlider">randRight (0 to 1):</label>
-      <input type="range" id="randRightSlider" class="slider" min="0" max="100" step="1" value="50">
-      <div class="value-display">Current Right Up%: <span id="randRightValue">0.5</span></div>
-    </div>
-
-    <!-- Slider for rand45s -->
-    <div class="slider-container">
-      <label for="rand45sSlider">rand45s (0 to 1):</label>
-      <input type="range" id="rand45sSlider" class="slider" min="0" max="100" step="1" value="50">
-      <div class="value-display">Current 45 chance: <span id="rand45sValue">0.5</span></div>
-    </div>
-
-    <!-- Checkbox to toggle grid lines -->
-    <div class="slider-container">
-      <input type="checkbox" id="gridToggle" checked>
-      <label for="gridToggle">Show Grid Lines</label>
+    <div class="slider-row">
+      <label for="rand45sSlider">45 chance</label>
+      <input type="range" id="rand45sSlider" min="0" max="100" step="1" value="50">
+      <span class="value-display" id="rand45sValue">0.5</span>
     </div>
 
     <!-- Seed: blank = random every time; a number always gives the same map (walls + 45's) -->
-    <div class="slider-container">
-      <label for="seedInput">Seed (blank = random):</label>
-      <div class="seed-row">
-        <input type="number" id="seedInput" placeholder="random">
-        <button id="newSeed" title="pick a random seed">New seed</button>
-      </div>
+    <div class="row">
+      <label for="seedInput">Seed</label>
+      <input type="number" id="seedInput" placeholder="random" style="width:90px">
+      <button id="newSeed" title="pick a random seed">New seed</button>
     </div>
 
-    <!-- Mix: roll random settings inside these ranges -->
-    <div class="mix">
-      <h3>Mix</h3>
-      <table>
-        <tr><td></td><td>min</td><td>max</td></tr>
-        <tr><td>Size X</td><td><input type="number" id="mixXmin" value="31" step="2"></td><td><input type="number" id="mixXmax" value="59" step="2"></td></tr>
-        <tr><td>Size Y</td><td><input type="number" id="mixYmin" value="31" step="2"></td><td><input type="number" id="mixYmax" value="59" step="2"></td></tr>
-        <tr><td>Left Up %</td><td><input type="number" id="mixLmin" value="30"></td><td><input type="number" id="mixLmax" value="70"></td></tr>
-        <tr><td>Right Up %</td><td><input type="number" id="mixRmin" value="30"></td><td><input type="number" id="mixRmax" value="70"></td></tr>
-        <tr><td>45 chance %</td><td><input type="number" id="mix45min" value="0"></td><td><input type="number" id="mix45max" value="100"></td></tr>
-        <tr><td title="floor tiles in the biggest connected area">Open tiles</td><td><input type="number" id="mixOmin" value="300"></td><td><input type="number" id="mixOmax" placeholder="any"></td></tr>
-      </table>
-      <button id="mixButton">Mix</button>
-      <div id="mixStatus"></div>
+    <div class="row">
+      <input type="checkbox" id="gridToggle" checked>
+      <label for="gridToggle">Show grid lines</label>
     </div>
 
-    <!-- Buttons -->
-    <div class="button-container">
+    <div class="buttons">
       <button id="Walls" onclick="regenWalls()">Walls</button>
       <button onclick="regen45s()">45's</button>
       <button onclick="json()">Download JSON</button>
       <button onclick="png(grid)">Download PNG</button>
     </div>
+
+    <!-- Mix: roll random settings inside these ranges -->
+    <div class="section mix">
+      <h3>Mix</h3>
+      <table>
+        <tr><td></td><td>min</td><td>max</td></tr>
+        <tr><td>Size X</td><td><input type="number" id="mixXmin" value="31" step="2"></td><td><input type="number" id="mixXmax" value="59" step="2"></td></tr>
+        <tr><td>Size Y</td><td><input type="number" id="mixYmin" value="31" step="2"></td><td><input type="number" id="mixYmax" value="59" step="2"></td></tr>
+        <tr><td>Left up %</td><td><input type="number" id="mixLmin" value="30"></td><td><input type="number" id="mixLmax" value="70"></td></tr>
+        <tr><td>Right up %</td><td><input type="number" id="mixRmin" value="30"></td><td><input type="number" id="mixRmax" value="70"></td></tr>
+        <tr><td>45 chance %</td><td><input type="number" id="mix45min" value="0"></td><td><input type="number" id="mix45max" value="100"></td></tr>
+        <tr><td title="floor tiles in the biggest connected area">Open tiles</td><td><input type="number" id="mixOmin" value="300"></td><td><input type="number" id="mixOmax" placeholder="any"></td></tr>
+      </table>
+      <div class="row"><button id="mixButton">Mix</button></div>
+      <div id="mixStatus"></div>
+    </div>
+
+    <!-- GitHub button -->
+    <a href="https://github.com/BambiTP/BuildAMapWorkshop" id="github-button" target="_blank">
+      <img src="https://img.shields.io/badge/BuildAMapWorkshop-GitHub-blue?logo=github&logoColor=white" alt="GitHub" />
+    </a>
   </div>
 
   <script>
